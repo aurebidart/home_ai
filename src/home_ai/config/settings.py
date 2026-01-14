@@ -1,5 +1,5 @@
 import os
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,13 +27,17 @@ def _env_list_int(name: str, default: str) -> list[int]:
 
 # ====================== MODELOS ======================
 
+class CameraConfig(BaseModel):
+    camera_id: str
+    rtsp_url: str
+
+
 class TelegramSettings(BaseModel):
     bot_token: str
     default_chat_id: str
 
 
 class CameraSettings(BaseModel):
-    rtsp_url: str
     resize_w: int
     resize_h: int
     input_send_every_s: float = 0.10
@@ -63,8 +67,9 @@ class AppSettings(BaseModel):
     show_window: bool
     window_name: str
 
-    telegram: TelegramSettings
+    cameras: list[CameraConfig]
     camera: CameraSettings
+    telegram: TelegramSettings
     detection: DetectionSettings
     recording: RecordingSettings
     webhook: WebhookSettings
@@ -73,11 +78,23 @@ class AppSettings(BaseModel):
 # ====================== BUILDER ======================
 
 def build_settings() -> AppSettings:
+    camera_ids = [c for c in _env("CAMERAS", "").split(",") if c]
+
+    cameras = [
+        CameraConfig(
+            camera_id=cid,
+            rtsp_url=_env(f"CAMERA_{cid.upper()}_RTSP"),
+        )
+        for cid in camera_ids
+    ]
+
     return AppSettings(
         log_level=_env("LOG_LEVEL", "INFO"),
         cooldown_s=_env_int("COOLDOWN_SECONDS", 60),
         show_window=_env_bool("SHOW_WINDOW", True),
         window_name=_env("WINDOW_NAME", "YOLO Seguridad"),
+
+        cameras=cameras,
 
         telegram=TelegramSettings(
             bot_token=_env("TELEGRAM_BOT_TOKEN"),
@@ -85,7 +102,6 @@ def build_settings() -> AppSettings:
         ),
 
         camera=CameraSettings(
-            rtsp_url=_env("CAMERA_RTSP_URL"),
             resize_w=_env_int("RESIZE_WIDTH", 640),
             resize_h=_env_int("RESIZE_HEIGHT", 360),
         ),

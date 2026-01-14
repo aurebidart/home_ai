@@ -26,17 +26,17 @@ def main() -> None:
     log.info("Inicializando Home AI")
 
     # =========================================================
-    # 2. Cámaras
+    # 2. Cámaras (MÚLTIPLES, MISMO SYSTEM)
     # =========================================================
-    cameras = CameraManager(
-        cameras=[
-            RTSPCamera(
-                camera_id="principal",
-                rtsp_url=settings.camera.rtsp_url,
-            ),
-            # 👉 Acá podés agregar más cámaras en el futuro
-        ]
-    )
+    camera_objects = [
+        RTSPCamera(
+            camera_id=cam.camera_id,
+            rtsp_url=cam.rtsp_url,
+        )
+        for cam in settings.cameras
+    ]
+
+    cameras = CameraManager(camera_objects)
 
     # =========================================================
     # 3. Detector (YOLO en proceso separado)
@@ -73,7 +73,7 @@ def main() -> None:
     )
 
     # =========================================================
-    # 6. Sistema de orquestación
+    # 6. Sistema de orquestación (UNO SOLO)
     # =========================================================
     system = SecuritySystem(
         cameras=cameras,
@@ -108,11 +108,10 @@ def main() -> None:
             use_reloader=False,
         )
 
-    webhook_thread = threading.Thread(
+    threading.Thread(
         target=run_webhook,
         daemon=True,
-    )
-    webhook_thread.start()
+    ).start()
 
     # =========================================================
     # 8. Loop principal
