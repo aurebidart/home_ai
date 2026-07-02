@@ -82,10 +82,26 @@ def _yolo_process(
 ) -> None:
     os.environ["YOLO_VERBOSE"] = "False"
     os.environ["ULTRALYTICS_VERBOSE"] = "False"
+    os.environ.setdefault("TORCH_CPP_LOG_LEVEL", "ERROR")
+    os.environ.setdefault("GLOG_minloglevel", "2")
 
     from ultralytics import YOLO
+    import torch
 
-    log.info("Inicializando YOLO (device=%s)", device)
+    try:
+        torch.backends.nnpack.enabled = False
+    except Exception:
+        pass
+
+    selected_device = str(device).strip().lower()
+    if selected_device not in ("cpu", "mps") and not torch.cuda.is_available():
+        log.warning(
+            "CUDA no disponible para YOLO_DEVICE=%s; usando CPU",
+            device,
+        )
+        selected_device = "cpu"
+
+    log.info("Inicializando YOLO (device=%s)", selected_device)
     model = YOLO("yolov8n.pt", verbose=False)
 
     while not stop_event.is_set():
@@ -106,7 +122,7 @@ def _yolo_process(
                 frame,
                 conf=conf,
                 classes=classes,
-                device=device,
+                device=selected_device,
                 imgsz=imgsz,
                 verbose=False,
             )
