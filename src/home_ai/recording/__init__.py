@@ -1,4 +1,4 @@
-from .recorder import VideoRecorder
+from .recorder import ContinuousVideoRecorder, VideoRecorder
 from .policies import FixedDurationPolicy
 
-__all__ = ["VideoRecorder", "FixedDurationPolicy"]
+__all__ = ["ContinuousVideoRecorder", "VideoRecorder", "FixedDurationPolicy"]

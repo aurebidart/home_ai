@@ -8,7 +8,7 @@ import numpy as np
 from home_ai.cameras.manager import CameraManager
 from home_ai.vision.detector import Detector
 from home_ai.vision.models import Detection
-from home_ai.recording.recorder import VideoRecorder
+from home_ai.recording.recorder import ContinuousVideoRecorder, VideoRecorder
 from home_ai.recording.policies import FixedDurationPolicy
 from home_ai.notifications.notifier import Notifier
 
@@ -21,6 +21,7 @@ class SecuritySystem:
         cameras: CameraManager,
         detector: Detector,
         recorder: VideoRecorder,
+        continuous_recorder: ContinuousVideoRecorder | None,
         recording_policy: FixedDurationPolicy,
         notifier: Notifier,
         cooldown_s: int,
@@ -30,6 +31,7 @@ class SecuritySystem:
         self._cameras = cameras
         self._detector = detector
         self._recorder = recorder
+        self._continuous_recorder = continuous_recorder
         self._policy = recording_policy
         self._notifier = notifier
         self._cooldown_s = cooldown_s
@@ -89,6 +91,14 @@ class SecuritySystem:
 
         now = time.time()
 
+        # ---- grabación continua / archivo circular ----
+        if self._continuous_recorder is not None:
+            frame_resized = cv2.resize(
+                frame,
+                self._continuous_recorder.frame_size,
+            )
+            self._continuous_recorder.write(camera_id, frame_resized)
+
         # ---- lógica de alerta / grabación ----
         if self._system_active and person_detected:
             if now - self._last_alert_ts >= self._cooldown_s:
@@ -110,7 +120,7 @@ class SecuritySystem:
         if self._recorder.is_recording:
             frame_resized = cv2.resize(
                 frame,
-                self._recorder._frame_size,  # (w, h)
+                self._recorder.frame_size,
             )
 
             self._recorder.write(frame_resized)
@@ -171,6 +181,9 @@ class SecuritySystem:
             self._detector.close()
         except Exception:
             pass
+
+        if self._continuous_recorder is not None:
+            self._continuous_recorder.close()
 
         self._cameras.close_all()
         cv2.destroyAllWindows()

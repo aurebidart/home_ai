@@ -21,6 +21,7 @@ El proyecto está pensado como un **backend profesional**, escalable a:
   - mochilas
 - 📸 Envío automático de fotos al detectar eventos
 - 🎬 Grabación automática de video (ej. 30 segundos por evento)
+- 📼 Grabación continua en segmentos comprimidos con retención de 48 horas
 - 📤 Envío del video por Telegram
 - 📡 Control remoto vía comandos de Telegram (`/on`, `/off`, `/estado`)
 - 🌐 Webhook expuesto con **Cloudflare Tunnel**
@@ -90,6 +91,7 @@ Crear un archivo `.env` en la raíz del proyecto:
 # Telegram
 TELEGRAM_BOT_TOKEN=xxxxx
 TELEGRAM_CHAT_ID=123456789
+TELEGRAM_CHAT_IDS=123456789,987654321
 
 # Cámara
 CAMERA_RTSP_URL=rtsp://user:pass@192.168.1.100:554/stream1
@@ -108,6 +110,11 @@ WINDOW_NAME=YOLO Seguridad
 # Video
 RECORD_DURATION_SECONDS=30
 RECORD_FPS=15
+RECORD_EVENT_OUTPUT_DIR=/tmp/home_ai/videos
+RECORD_CONTINUOUS_ENABLED=true
+RECORD_CONTINUOUS_OUTPUT_DIR=/tmp/home_ai/continuous
+RECORD_CONTINUOUS_SEGMENT_SECONDS=300
+RECORD_CONTINUOUS_RETENTION_HOURS=48
 RESIZE_WIDTH=640
 RESIZE_HEIGHT=360
 
@@ -117,6 +124,14 @@ YOLO_DEVICE=0
 YOLO_IMGSZ=640
 YOLO_CLASSES=0,15,16,24
 ```
+
+Para enviar alertas a más de una persona, usar `TELEGRAM_CHAT_IDS` con IDs
+separados por coma. `TELEGRAM_CHAT_ID` queda como compatibilidad para un solo
+destinatario.
+
+En servidores con entorno gráfico, `SHOW_WINDOW=true` muestra la cámara en una
+ventana local. Si el servidor corre sin escritorio o como servicio sin acceso a
+display, usar `SHOW_WINDOW=false`.
 
 > ⚠️ **Nunca subas `.env` a GitHub**. Usá `.env.example`.
 
@@ -219,6 +234,26 @@ Desde el chat con el bot:
    * se cierra el video
    * se envía por Telegram
 6. El sistema sigue funcionando sin reiniciarse
+
+---
+
+## 📼 Grabación continua
+
+Mientras el sistema monitorea, también guarda video continuo en segmentos `.mp4`.
+Por defecto:
+
+* Directorio: `/tmp/home_ai/continuous`
+* Duración de cada segmento: `300` segundos
+* Retención: `48` horas
+
+Cuando un segmento nuevo se cierra, el sistema elimina automáticamente los
+segmentos continuos que superan la retención configurada. Para cambiarlo, editá:
+
+```env
+RECORD_CONTINUOUS_OUTPUT_DIR=/tmp/home_ai/continuous
+RECORD_CONTINUOUS_SEGMENT_SECONDS=300
+RECORD_CONTINUOUS_RETENTION_HOURS=48
+```
 
 ---
 

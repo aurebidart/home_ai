@@ -7,7 +7,11 @@ from home_ai.config.settings import build_settings
 
 from home_ai.cameras import RTSPCamera, CameraManager
 from home_ai.vision import YoloDetector
-from home_ai.recording import VideoRecorder, FixedDurationPolicy
+from home_ai.recording import (
+    ContinuousVideoRecorder,
+    FixedDurationPolicy,
+    VideoRecorder,
+)
 from home_ai.notifications import TelegramNotifier
 from home_ai.orchestration import SecuritySystem
 from home_ai.api import create_webhook_app
@@ -52,13 +56,26 @@ def main() -> None:
     # 4. Grabación
     # =========================================================
     recorder = VideoRecorder(
-        output_dir=Path("/tmp/home_ai/videos"),
+        output_dir=Path(settings.recording.event_output_dir),
         fps=settings.recording.fps,
         frame_size=(
             settings.camera.resize_w,
             settings.camera.resize_h,
         ),
     )
+
+    continuous_recorder = None
+    if settings.recording.continuous_enabled:
+        continuous_recorder = ContinuousVideoRecorder(
+            output_dir=Path(settings.recording.continuous_output_dir),
+            fps=settings.recording.fps,
+            frame_size=(
+                settings.camera.resize_w,
+                settings.camera.resize_h,
+            ),
+            segment_seconds=settings.recording.continuous_segment_seconds,
+            retention_hours=settings.recording.continuous_retention_hours,
+        )
 
     recording_policy = FixedDurationPolicy(
         duration_s=settings.recording.duration_s
@@ -69,7 +86,7 @@ def main() -> None:
     # =========================================================
     notifier = TelegramNotifier(
         bot_token=settings.telegram.bot_token,
-        chat_id=settings.telegram.default_chat_id,
+        chat_ids=settings.telegram.chat_ids,
     )
 
     # =========================================================
@@ -79,6 +96,7 @@ def main() -> None:
         cameras=cameras,
         detector=detector,
         recorder=recorder,
+        continuous_recorder=continuous_recorder,
         recording_policy=recording_policy,
         notifier=notifier,
         cooldown_s=settings.cooldown_s,

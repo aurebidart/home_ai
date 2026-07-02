@@ -15,10 +15,12 @@ def create_webhook_app(system: SecuritySystem, path: str = "/telegram") -> Flask
     @app.post(path)
     def telegram_webhook() -> Response:
         data = request.get_json(silent=True) or {}
-        msg = (data.get("message") or {}).get("text")
+        message = data.get("message") or {}
+        msg = message.get("text")
+        chat_id = (message.get("chat") or {}).get("id")
 
         if msg:
-            log.info("📩 Comando recibido: %s", msg)
+            log.info("📩 Comando recibido chat_id=%s: %s", chat_id, msg)
 
             # Procesar en background para responder rápido a Telegram
             threading.Thread(

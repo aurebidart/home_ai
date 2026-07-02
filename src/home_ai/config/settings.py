@@ -25,11 +25,15 @@ def _env_list_int(name: str, default: str) -> list[int]:
     return [int(x) for x in _env(name, default).split(",") if x.strip()]
 
 
+def _env_list_str(name: str, default: str) -> list[str]:
+    return [x.strip() for x in (_env(name) or default).split(",") if x.strip()]
+
+
 # ====================== MODELOS ======================
 
 class TelegramSettings(BaseModel):
     bot_token: str
-    default_chat_id: str
+    chat_ids: list[str]
 
 
 class CameraSettings(BaseModel):
@@ -49,6 +53,11 @@ class DetectionSettings(BaseModel):
 class RecordingSettings(BaseModel):
     duration_s: int
     fps: int
+    event_output_dir: str
+    continuous_output_dir: str
+    continuous_segment_seconds: int
+    continuous_retention_hours: int
+    continuous_enabled: bool
 
 
 class WebhookSettings(BaseModel):
@@ -81,7 +90,10 @@ def build_settings() -> AppSettings:
 
         telegram=TelegramSettings(
             bot_token=_env("TELEGRAM_BOT_TOKEN"),
-            default_chat_id=_env("TELEGRAM_CHAT_ID"),
+            chat_ids=_env_list_str(
+                "TELEGRAM_CHAT_IDS",
+                _env("TELEGRAM_CHAT_ID", ""),
+            ),
         ),
 
         camera=CameraSettings(
@@ -100,6 +112,20 @@ def build_settings() -> AppSettings:
         recording=RecordingSettings(
             duration_s=_env_int("RECORD_DURATION_SECONDS", 30),
             fps=_env_int("RECORD_FPS", 15),
+            event_output_dir=_env("RECORD_EVENT_OUTPUT_DIR", "/tmp/home_ai/videos"),
+            continuous_output_dir=_env(
+                "RECORD_CONTINUOUS_OUTPUT_DIR",
+                "/tmp/home_ai/continuous",
+            ),
+            continuous_segment_seconds=_env_int(
+                "RECORD_CONTINUOUS_SEGMENT_SECONDS",
+                300,
+            ),
+            continuous_retention_hours=_env_int(
+                "RECORD_CONTINUOUS_RETENTION_HOURS",
+                48,
+            ),
+            continuous_enabled=_env_bool("RECORD_CONTINUOUS_ENABLED", True),
         ),
 
         webhook=WebhookSettings(
