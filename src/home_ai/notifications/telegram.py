@@ -49,7 +49,7 @@ class TelegramNotifier(Notifier):
     def _send_text_impl(self, text: str) -> None:
         for chat_id in self._chat_ids:
             try:
-                requests.post(
+                response = requests.post(
                     f"{self._base_url}/sendMessage",
                     data={
                         "chat_id": chat_id,
@@ -57,6 +57,7 @@ class TelegramNotifier(Notifier):
                     },
                     timeout=5,
                 )
+                self._log_telegram_error(response, "texto", chat_id)
             except Exception as exc:
                 log.warning("Error enviando texto Telegram a %s: %s", chat_id, exc)
 
@@ -75,12 +76,13 @@ class TelegramNotifier(Notifier):
                     data["caption"] = caption
 
                 try:
-                    requests.post(
+                    response = requests.post(
                         f"{self._base_url}/sendPhoto",
                         data=data,
                         files={"photo": ("alert.jpg", image_bytes, "image/jpeg")},
                         timeout=20,
                     )
+                    self._log_telegram_error(response, "foto", chat_id)
                 except Exception as exc:
                     log.warning("Error enviando foto Telegram a %s: %s", chat_id, exc)
 
@@ -95,12 +97,30 @@ class TelegramNotifier(Notifier):
                     if caption:
                         data["caption"] = caption
 
-                    requests.post(
+                    response = requests.post(
                         f"{self._base_url}/sendVideo",
                         data=data,
                         files={"video": vid},
                         timeout=60,
                     )
+                    self._log_telegram_error(response, "video", chat_id)
 
             except Exception as exc:
                 log.warning("Error enviando video Telegram a %s: %s", chat_id, exc)
+
+    def _log_telegram_error(
+        self,
+        response: requests.Response,
+        kind: str,
+        chat_id: str,
+    ) -> None:
+        if response.ok:
+            return
+
+        log.warning(
+            "Telegram rechazo %s a %s: status=%s body=%s",
+            kind,
+            chat_id,
+            response.status_code,
+            response.text[:300],
+        )

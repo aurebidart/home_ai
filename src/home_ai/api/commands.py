@@ -17,6 +17,7 @@ class CommandRouter:
             "/on": self._on,
             "/off": self._off,
             "/estado": self._status,
+            "/foto": self._photo,
         }
 
     def handle(self, text: str) -> None:
@@ -42,3 +43,6 @@ class CommandRouter:
 
     def _status(self) -> str:
         return f"📡 Estado: {self._system.status()}"
+
+    def _photo(self) -> None:
+        self._system.send_snapshot()

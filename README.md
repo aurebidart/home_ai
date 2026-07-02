@@ -218,6 +218,7 @@ Desde el chat con el bot:
 * `/on` → Activa el sistema
 * `/off` → Desactiva detecciones
 * `/estado` → Devuelve el estado actual
+* `/foto` → Envía una captura actual de la cámara
 
 (Extensible fácilmente desde `api/commands.py`)
 

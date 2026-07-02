@@ -1,6 +1,7 @@
 import time
 import logging
 from pathlib import Path
+from threading import Lock
 
 import cv2
 import numpy as np
@@ -40,6 +41,8 @@ class SecuritySystem:
 
         self._last_alert_ts: float = 0.0
         self._system_active: bool = True
+        self._latest_frames: dict[str, np.ndarray] = {}
+        self._latest_frames_lock = Lock()
 
     # ---------- control externo ----------
 
@@ -53,6 +56,22 @@ class SecuritySystem:
 
     def status(self) -> str:
         return "ACTIVO 🟢" if self._system_active else "INACTIVO 🔴"
+
+    def send_snapshot(self) -> None:
+        with self._latest_frames_lock:
+            camera_id = next(iter(self._latest_frames), None)
+            frame = None
+            if camera_id is not None:
+                frame = self._latest_frames[camera_id].copy()
+
+        if frame is None or camera_id is None:
+            self._notifier.send_text("📸 Todavía no hay imagen disponible")
+            return
+
+        self._notifier.send_photo(
+            frame,
+            caption=f"📸 Captura actual ({camera_id})",
+        )
 
     # ---------- loop principal ----------
 
@@ -83,6 +102,9 @@ class SecuritySystem:
     # ---------- procesamiento ----------
 
     def _process_frame(self, camera_id: str, frame: np.ndarray) -> None:
+        with self._latest_frames_lock:
+            self._latest_frames[camera_id] = frame.copy()
+
         # enviar frame a detector (no bloqueante)
         self._detector.submit_frame(frame)
 
